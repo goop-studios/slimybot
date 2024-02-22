@@ -1,0 +1,22 @@
+name: Deploy on Shuttle
+
+on:
+  push:
+    branches: main
+  pull_request:
+    branches: main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: shuttle-hq/deploy-action@main
+        with:
+          deploy-key: ${{ secrets.SHUTTLE_DEPLOY_KEY }}
+          name: "slimybot"
+          allow-dirty: "true"
+          no-test: "true"
+          secrets: |
+            DISCORD_TOKEN = '${{ secrets.BOT_TOKEN }}'
