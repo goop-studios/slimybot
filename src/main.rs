@@ -1,13 +1,17 @@
 use anyhow::Context as _;
+use std::sync::Mutex;
 use poise::serenity_prelude::{ClientBuilder, GatewayIntents};
 use shuttle_secrets::SecretStore;
 use shuttle_serenity::ShuttleSerenity;
 
-use commands::embed::mkembed;
+use commands::{embed::mkembed, log::enable_welcome};
 
 mod commands;
 
-pub struct Data {} // User data, which is stored and accessible in all command invocations
+pub struct Data {
+    welcome_channel: Mutex<Option<u64>>,
+    send_welcome_message: Mutex<bool>,
+} // User data, which is stored and accessible in all command invocations
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Context<'a> = poise::Context<'a, Data, Error>;
 pub type ApplicationContext<'a> = poise::ApplicationContext<'a, Data, Error>; 
@@ -28,13 +32,16 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![hello(), mkembed()],
+            commands: vec![hello(), mkembed(), enable_welcome()],
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(Data {})
+                Ok(Data {
+                    welcome_channel: Mutex::new(None),
+                    send_welcome_message: Mutex::new(false),
+                })
             })
         })
         .build();

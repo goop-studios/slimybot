@@ -1,8 +1,5 @@
-use std::vec;
-
 use crate::{Error, ApplicationContext};
-use poise::serenity_prelude::{self as serenity, CreateEmbed, CreateEmbedAuthor, CreateMessage, Mentionable};
-use serenity::Channel;
+use poise::serenity_prelude::{self as serenity, CreateEmbed, CreateEmbedAuthor, CreateMessage, Mentionable, Channel};
 use poise::Modal;
 
 #[derive(Debug, Modal)]
@@ -21,7 +18,7 @@ struct EmbedModal {
 
 /// Creates a modal for testing 
 #[poise::command(slash_command, required_permissions="ADMINISTRATOR")]
-pub async fn mkembed(ctx: ApplicationContext<'_>, _channel: Channel) -> Result<(), Error> {
+pub async fn mkembed(ctx: ApplicationContext<'_>, #[description = "Channel in which the embed will be sent."] channel: Channel) -> Result<(), Error> {
     let reply = {
         let components = vec![serenity::CreateActionRow::Buttons(vec![
             serenity::CreateButton::new("open_modal")
@@ -29,7 +26,7 @@ pub async fn mkembed(ctx: ApplicationContext<'_>, _channel: Channel) -> Result<(
                 .style(serenity::ButtonStyle::Success),
         ])];
 
-        let description = format!("This is a test of the embed modal, please click the button below to begin. it will write a message to the channel {}.", _channel.mention());
+        let description = format!("This is a test of the embed modal, please click the button below to begin. it will write a message to the channel {}.", channel.mention());
     
         poise::CreateReply::default()
             .embed(CreateEmbed::default()
@@ -63,10 +60,9 @@ pub async fn mkembed(ctx: ApplicationContext<'_>, _channel: Channel) -> Result<(
 
         let embed_message = CreateMessage::default().embed(embed);
 
-        _channel.id().send_message(ctx.http(), embed_message).await?;
+        channel.id().send_message(ctx.http(), embed_message).await?;
         ctx.send(reply).await?;
     }
-
 
     Ok(())
 }
