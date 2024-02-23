@@ -1,5 +1,10 @@
+use std::fmt::format;
+
 use crate::{Context, Error};
-use poise::serenity_prelude::GetMessages;
+use poise::{
+    serenity_prelude::{self as serenity, GetMessages},
+    CreateReply,
+};
 
 #[poise::command(slash_command, required_permissions = "ADMINISTRATOR")]
 pub async fn purge(
@@ -17,6 +22,12 @@ pub async fn purge(
         .delete_messages(&ctx.http(), messages)
         .await?;
 
-    ctx.reply("Purging messages!").await?;
+    let reply = CreateReply::default()
+        .embed(
+            serenity::CreateEmbed::default().description(format!("Deleted {} messages.", amount)),
+        )
+        .ephemeral(true);
+
+    ctx.send(reply).await?;
     Ok(())
 }
