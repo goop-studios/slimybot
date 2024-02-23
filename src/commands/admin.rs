@@ -17,5 +17,6 @@ pub async fn purge(
         .delete_messages(&ctx.http(), messages)
         .await?;
 
+    ctx.reply("Purging messages!").await?;
     Ok(())
 }
