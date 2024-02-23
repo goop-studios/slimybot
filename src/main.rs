@@ -84,7 +84,10 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
 
     let client = ClientBuilder::new(
         discord_token,
-        GatewayIntents::non_privileged() | GatewayIntents::GUILD_MEMBERS,
+        GatewayIntents::non_privileged()
+            | GatewayIntents::GUILD_MEMBERS
+            | GatewayIntents::GUILD_MESSAGES
+            | GatewayIntents::GUILD_PRESENCES,
     )
     .framework(framework)
     .await
