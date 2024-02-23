@@ -1,5 +1,5 @@
 use crate::{Error, ApplicationContext, Data};
-use poise::{serenity_prelude::{self as serenity, Channel, ChannelId, Member, Mentionable}, CreateReply};
+use poise::{serenity_prelude::{self as serenity, Channel, ChannelId, CreateMessage, Member, Mentionable}, CreateReply};
 
 #[poise::command(slash_command, required_permissions="ADMINISTRATOR")]
 pub async fn enable_welcome(ctx: ApplicationContext<'_>, #[description = "Channel which welcome messages will be sent."] channel: Channel) -> Result<(), Error> {
@@ -29,8 +29,15 @@ pub async fn write_welcome(ctx: &serenity::Context, data: &Data, new_member: &Me
     if *data.send_welcome_message.try_lock().expect("poisoned lock.") {
         let welcome_channel = data.welcome_channel.try_lock().expect("poisoned lock.").expect("Welcome channel not set.");
         let welcome_channel = serenity::ChannelId::new(welcome_channel);
-        let welcome_message = format!("Welcome to the server, {}!", new_member.user.mention());
-        welcome_channel.say(&ctx.http, welcome_message).await?;
+        let member_mention = new_member.mention();
+        let server_name = new_member.guild_id.name(ctx).expect("Server name not found.");
+        let message: CreateMessage = CreateMessage::new()
+            .embed(serenity::CreateEmbed::default()
+                .title("Welcome!")
+                .description(format!("Welcome to {server_name}, {member_mention}!"))
+                .color(0x00ff00)
+            );
+        welcome_channel.send_message(&ctx.http, message).await?;
     }
     Ok(())
 }
