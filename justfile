@@ -12,4 +12,4 @@ default: deploy
   just deploy
 
 @deploy:
-  cargo shuttle deploy --no-test --allow-dirty
+  RUST_LOG=cargo_shuttle cargo shuttle deploy --no-test --allow-dirty

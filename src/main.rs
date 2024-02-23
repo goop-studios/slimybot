@@ -1,12 +1,13 @@
 use anyhow::Context as _;
 use std::sync::Mutex;
-use poise::serenity_prelude::{self as serenity, ClientBuilder, GatewayIntents, Mentionable};
+use poise::serenity_prelude::{self as serenity, ClientBuilder, GatewayIntents};
 use shuttle_secrets::SecretStore;
 use shuttle_serenity::ShuttleSerenity;
 
 use commands::{embed::mkembed, log::{enable_welcome, write_welcome}};
 
 mod commands;
+mod config;
 
 pub struct Data {
     welcome_channel: Mutex<Option<u64>>,
@@ -43,6 +44,20 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
         .get("DISCORD_TOKEN")
         .context("'DISCORD_TOKEN' was not found")?;
 
+    let bot_state = if let Ok(config) = config::parse::parse_config() {
+        println!("{:?}", config);
+        Data {
+            welcome_channel: Mutex::new(Some(config.welcome.channel)),
+            send_welcome_message: Mutex::new(config.welcome.enabled),
+        }
+    } else {
+        Data {
+            welcome_channel: Mutex::new(None),
+            send_welcome_message: Mutex::new(false),
+        }
+    };
+
+
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: vec![hello(), mkembed(), enable_welcome()],
@@ -54,10 +69,7 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
         .setup(|ctx, _ready, framework| {
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                Ok(Data {
-                    welcome_channel: Mutex::new(None),
-                    send_welcome_message: Mutex::new(false),
-                })
+                Ok(bot_state)
             })
         })
         .build();
@@ -69,3 +81,4 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
 
     Ok(client.into())
 }
+

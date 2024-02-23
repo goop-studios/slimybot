@@ -1,5 +1,5 @@
 use crate::{Error, ApplicationContext, Data};
-use poise::{serenity_prelude::{self as serenity, Channel, ChannelId, CreateEmbed, CreateEmbedAuthor, CreateMessage, Member, Mentionable}, CreateReply};
+use poise::{serenity_prelude::{self as serenity, Channel, ChannelId, Member, Mentionable}, CreateReply};
 
 #[poise::command(slash_command, required_permissions="ADMINISTRATOR")]
 pub async fn enable_welcome(ctx: ApplicationContext<'_>, #[description = "Channel which welcome messages will be sent."] channel: Channel) -> Result<(), Error> {
