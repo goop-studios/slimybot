@@ -1,7 +1,7 @@
 use std::vec;
 
 use crate::{Error, ApplicationContext};
-use poise::serenity_prelude::{self as serenity, CreateEmbed, CreateEmbedAuthor, Mentionable};
+use poise::serenity_prelude::{self as serenity, CreateEmbed, CreateEmbedAuthor, CreateMessage, Mentionable};
 use serenity::Channel;
 use poise::Modal;
 
@@ -38,6 +38,7 @@ pub async fn mkembed(ctx: ApplicationContext<'_>, _channel: Channel) -> Result<(
                     .url("https://goop-studios.monster"))
                 .description(description))
             .components(components)
+            .ephemeral(true)
     };
 
     ctx.send(reply).await?;
@@ -49,7 +50,21 @@ pub async fn mkembed(ctx: ApplicationContext<'_>, _channel: Channel) -> Result<(
     {
         let data =
             poise::execute_modal_on_component_interaction::<EmbedModal>(ctx, mci, None, None).await?;
-        ctx.reply(format!("data gotten:  {:?}", data)).await?;
+
+        let embed = CreateEmbed::default()
+            .title(format!("{}", data.as_ref().unwrap().first_input))
+            .description(format!("{}", data.as_ref().unwrap().second_input))
+            .author(CreateEmbedAuthor::new("Goop Studios")
+                .url("https://goop-studios.monster"));
+
+        let reply = poise::CreateReply::default()
+            .content(format!("You entered: 1: {} 2: {}", data.as_ref().unwrap().first_input, data.as_ref().unwrap().second_input))
+            .ephemeral(true);
+
+        let embed_message = CreateMessage::default().embed(embed);
+
+        _channel.id().send_message(ctx.http(), embed_message).await?;
+        ctx.send(reply).await?;
     }
 
 
