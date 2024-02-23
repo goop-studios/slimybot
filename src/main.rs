@@ -1,10 +1,10 @@
 use anyhow::Context as _;
 use std::sync::Mutex;
-use poise::serenity_prelude::{ClientBuilder, GatewayIntents};
+use poise::serenity_prelude::{self as serenity, ClientBuilder, GatewayIntents, Mentionable};
 use shuttle_secrets::SecretStore;
 use shuttle_serenity::ShuttleSerenity;
 
-use commands::{embed::mkembed, log::enable_welcome};
+use commands::{embed::mkembed, log::{enable_welcome, write_welcome}};
 
 mod commands;
 
@@ -23,6 +23,19 @@ async fn hello(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
+
+async fn handle_event(ctx: &serenity::Context, event: &serenity::FullEvent, _framework: poise::FrameworkContext<'_, Data, Error>, data: &Data,) -> Result<(), Error> {
+    match event {
+        serenity::FullEvent::GuildMemberAddition { new_member } => write_welcome(ctx, data, new_member).await?,
+        serenity::FullEvent::Ready { data_about_bot } => {
+            println!("{} is ready!", data_about_bot.user.name);
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+
 #[shuttle_runtime::main]
 async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleSerenity {
     // Get the discord token set in `Secrets.toml`
@@ -33,6 +46,9 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
             commands: vec![hello(), mkembed(), enable_welcome()],
+            event_handler: |ctx, event, framework, data| {
+                Box::pin(handle_event(ctx, event, framework, data))
+            },
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
