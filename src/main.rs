@@ -1,10 +1,14 @@
 use anyhow::Context as _;
-use std::sync::Mutex;
 use poise::serenity_prelude::{self as serenity, ClientBuilder, GatewayIntents};
 use shuttle_secrets::SecretStore;
 use shuttle_serenity::ShuttleSerenity;
+use std::sync::Mutex;
 
-use commands::{embed::mkembed, log::{enable_welcome, write_welcome}};
+use commands::{
+    admin::purge,
+    embed::mkembed,
+    log::{enable_welcome, write_welcome},
+};
 
 mod commands;
 mod config;
@@ -15,7 +19,7 @@ pub struct Data {
 } // User data, which is stored and accessible in all command invocations
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Context<'a> = poise::Context<'a, Data, Error>;
-pub type ApplicationContext<'a> = poise::ApplicationContext<'a, Data, Error>; 
+pub type ApplicationContext<'a> = poise::ApplicationContext<'a, Data, Error>;
 
 /// Responds with "world!"
 #[poise::command(slash_command)]
@@ -24,10 +28,16 @@ async fn hello(ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
-
-async fn handle_event(ctx: &serenity::Context, event: &serenity::FullEvent, _framework: poise::FrameworkContext<'_, Data, Error>, data: &Data,) -> Result<(), Error> {
+async fn handle_event(
+    ctx: &serenity::Context,
+    event: &serenity::FullEvent,
+    _framework: poise::FrameworkContext<'_, Data, Error>,
+    data: &Data,
+) -> Result<(), Error> {
     match event {
-        serenity::FullEvent::GuildMemberAddition { new_member } => write_welcome(ctx, data, new_member).await?,
+        serenity::FullEvent::GuildMemberAddition { new_member } => {
+            write_welcome(ctx, data, new_member).await?
+        }
         serenity::FullEvent::Ready { data_about_bot } => {
             println!("{} is ready!", data_about_bot.user.name);
         }
@@ -35,7 +45,6 @@ async fn handle_event(ctx: &serenity::Context, event: &serenity::FullEvent, _fra
     }
     Ok(())
 }
-
 
 #[shuttle_runtime::main]
 async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleSerenity {
@@ -57,10 +66,9 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
         }
     };
 
-
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![hello(), mkembed(), enable_welcome()],
+            commands: vec![hello(), mkembed(), enable_welcome(), purge()],
             event_handler: |ctx, event, framework, data| {
                 Box::pin(handle_event(ctx, event, framework, data))
             },
@@ -74,11 +82,13 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
         })
         .build();
 
-    let client = ClientBuilder::new(discord_token, GatewayIntents::non_privileged() | GatewayIntents::GUILD_MEMBERS)
-        .framework(framework)
-        .await
-        .map_err(shuttle_runtime::CustomError::new)?;
+    let client = ClientBuilder::new(
+        discord_token,
+        GatewayIntents::non_privileged() | GatewayIntents::GUILD_MEMBERS,
+    )
+    .framework(framework)
+    .await
+    .map_err(shuttle_runtime::CustomError::new)?;
 
     Ok(client.into())
 }
-
