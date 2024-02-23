@@ -1,7 +1,7 @@
 use std::vec;
 
 use crate::{Error, ApplicationContext};
-use poise::serenity_prelude::{self as serenity, CreateEmbed, CreateEmbedAuthor};
+use poise::serenity_prelude::{self as serenity, CreateEmbed, CreateEmbedAuthor, Mentionable};
 use serenity::Channel;
 use poise::Modal;
 
@@ -28,13 +28,15 @@ pub async fn mkembed(ctx: ApplicationContext<'_>, _channel: Channel) -> Result<(
                 .label("Create Embed")
                 .style(serenity::ButtonStyle::Success),
         ])];
+
+        let description = format!("This is a test of the embed modal, please click the button below to begin. it will write a message to the channel {}.", _channel.mention());
     
         poise::CreateReply::default()
             .embed(CreateEmbed::default()
                 .title("Embed Modal Test")
                 .author(CreateEmbedAuthor::new("Goop Studios")
                     .url("https://goop-studios.monster"))
-                .description("This is a test of the embed modal."))
+                .description(description))
             .components(components)
     };
 
@@ -47,7 +49,7 @@ pub async fn mkembed(ctx: ApplicationContext<'_>, _channel: Channel) -> Result<(
     {
         let data =
             poise::execute_modal_on_component_interaction::<EmbedModal>(ctx, mci, None, None).await?;
-        println!("Got data: {:?}", data);
+        ctx.reply(format!("data gotten:  {:?}", data)).await?;
     }
 
 
