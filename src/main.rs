@@ -99,7 +99,7 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![hello(), mkembed(), set_welcome(), toggle_welcome(), purge(), set_autorole(), toggle_autorole()],
+            commands: vec![help(), mkembed(), set_welcome(), toggle_welcome(), purge(), set_autorole(), toggle_autorole()],
             event_handler: |ctx, event, framework, data| {
                 Box::pin(handle_event(ctx, event, framework, data))
             },
