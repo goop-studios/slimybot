@@ -1,4 +1,6 @@
-use crate::{ApplicationContext, Data, Error};
+use std::path::Path;
+
+use crate::{ApplicationContext, Data, Error, BotConfig};
 use poise::{
     serenity_prelude::{self as serenity, Channel, ChannelId, CreateMessage, Member, Mentionable},
     CreateReply,
@@ -24,6 +26,13 @@ pub async fn enable_welcome(
         *send_welcome_message = true;
         *send_welcome_message
     };
+
+    let default_path = Path::new("config.toml");
+
+    let mut new_config = BotConfig::default();
+    new_config.welcome.channel = welcome_channel.unwrap();
+    new_config.welcome.enabled = send_welcome_message;
+    new_config.write(&default_path).expect("Can't write to file.");
 
     let channel_mention = ChannelId::new(welcome_channel.unwrap()).mention();
 

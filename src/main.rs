@@ -3,12 +3,16 @@ use poise::serenity_prelude::{self as serenity, ClientBuilder, GatewayIntents};
 use shuttle_secrets::SecretStore;
 use shuttle_serenity::ShuttleSerenity;
 use std::sync::Mutex;
+use std::path::Path;
 
 use commands::{
     admin::purge,
     embed::mkembed,
+    roles::create_role_menu,
     log::{enable_welcome, write_welcome},
 };
+
+use config::parse::BotConfig;
 
 mod commands;
 mod config;
@@ -53,7 +57,9 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
         .get("DISCORD_TOKEN")
         .context("'DISCORD_TOKEN' was not found")?;
 
-    let bot_state = if let Ok(config) = config::parse::parse_config() {
+    let default_path = Path::new("config.toml");
+
+    let bot_state = if let Ok(config) = BotConfig::read(&default_path) {
         println!("{:?}", config);
         Data {
             welcome_channel: Mutex::new(Some(config.welcome.channel)),
@@ -68,7 +74,7 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![hello(), mkembed(), enable_welcome(), purge()],
+            commands: vec![hello(), mkembed(), enable_welcome(), purge(), create_role_menu()],
             event_handler: |ctx, event, framework, data| {
                 Box::pin(handle_event(ctx, event, framework, data))
             },
