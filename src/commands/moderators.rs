@@ -4,7 +4,7 @@ use poise::{
     CreateReply,
 };
 
-#[poise::command(slash_command, required_permissions = "ADMINISTRATOR")]
+#[poise::command(slash_command, required_permissions = "ADMINISTRATOR", category="Moderation")]
 pub async fn purge(
     ctx: Context<'_>,
     #[description = "Number of messages to delete."] amount: u8,

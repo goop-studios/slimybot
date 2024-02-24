@@ -17,8 +17,8 @@ struct EmbedModal {
     second_input: String,
 }
 
-/// Creates a modal for testing
-#[poise::command(slash_command, required_permissions = "ADMINISTRATOR")]
+/// Creates a modal for making embeds in picked channel. WIP
+#[poise::command(slash_command, required_permissions = "ADMINISTRATOR", category="Embed")]
 pub async fn mkembed(
     ctx: ApplicationContext<'_>,
     #[description = "Channel in which the embed will be sent."] channel: Channel,

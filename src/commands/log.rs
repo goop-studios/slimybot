@@ -4,7 +4,9 @@ use poise::{
     CreateReply,
 };
 
-#[poise::command(slash_command, required_permissions = "ADMINISTRATOR")]
+
+/// Set whether the bot should send a welcome message in picked channel.
+#[poise::command(slash_command, required_permissions = "ADMINISTRATOR", category="Logs")]
 pub async fn toggle_welcome(
     ctx: ApplicationContext<'_>, 
 ) -> Result<(), Error> {
@@ -22,7 +24,9 @@ pub async fn toggle_welcome(
     Ok(())
 }
 
-#[poise::command(slash_command, required_permissions = "ADMINISTRATOR")]
+
+/// Set channel the bot shall welcome people in.
+#[poise::command(slash_command, required_permissions = "ADMINISTRATOR", category="Logs")]
 pub async fn set_welcome(
     ctx: ApplicationContext<'_>,
     #[description = "Channel which welcome messages will be sent."] channel: Channel,

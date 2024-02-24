@@ -1,12 +1,12 @@
 use anyhow::Context as _;
-use poise::serenity_prelude::{self as serenity, ClientBuilder, GatewayIntents};
+use poise::{samples::HelpConfiguration, serenity_prelude::{self as serenity, ClientBuilder, GatewayIntents}};
 use shuttle_secrets::SecretStore;
 use shuttle_serenity::ShuttleSerenity;
 use std::sync::Mutex;
 use std::path::Path;
 
 use commands::{
-    admin::purge,
+    moderators::purge,
     embed::mkembed,
     roles::{set_autorole, toggle_autorole, set_role},
     log::{toggle_welcome, set_welcome, write_welcome},
@@ -27,12 +27,27 @@ pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Context<'a> = poise::Context<'a, Data, Error>;
 pub type ApplicationContext<'a> = poise::ApplicationContext<'a, Data, Error>;
 
-/// Responds with "world!"
-#[poise::command(slash_command)]
-async fn hello(ctx: Context<'_>) -> Result<(), Error> {
-    ctx.say("world!").await?;
+
+#[poise::command(slash_command, track_edits, category = "Utility")]
+async fn help(ctx: Context<'_>, #[description = "Command to get help for."] mut command: Option<String>) -> Result<(), Error> {
+    if ctx.invoked_command_name() != "help" {
+        command = match command {
+            Some(c) => Some(format!("{} {}", ctx.invoked_command_name(), c)),
+            None => Some(ctx.invoked_command_name().to_string())
+        };
+    }
+    
+    let config = HelpConfiguration {
+        show_subcommands: true,
+        show_context_menu_commands: true,
+        ephemeral: true,
+        extra_text_at_bottom: "Made with <3 by h4rl @ goop-studios.monster",
+        ..Default::default()
+    };
+    poise::builtins::help(ctx, command.as_deref(), config).await?;
     Ok(())
 }
+
 
 async fn handle_event(
     ctx: &serenity::Context,
