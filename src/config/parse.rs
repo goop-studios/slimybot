@@ -13,6 +13,7 @@ type Error = Box<dyn std::error::Error>;
 pub struct BotConfig {
     // Sections
     pub welcome: Welcome,
+    pub autorole: AutoRole,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -20,6 +21,13 @@ pub struct Welcome {
     // Fields
     pub enabled: bool,
     pub channel: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct AutoRole {
+    // Fields
+    pub enabled: bool,
+    pub role: u64,
 }
 
 impl BotConfig {

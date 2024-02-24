@@ -8,19 +8,21 @@ use std::path::Path;
 use commands::{
     admin::purge,
     embed::mkembed,
-    roles::create_role_menu,
-    log::{enable_welcome, write_welcome},
+    roles::{set_autorole, toggle_autorole, set_role},
+    log::{toggle_welcome, set_welcome, write_welcome},
 };
 
-use config::parse::BotConfig;
+use state::{Data, Welcome, AutoRole};
 
+use config::{
+    autowrite::write_to_conf,
+    parse::BotConfig
+};
+
+mod state;
 mod commands;
 mod config;
 
-pub struct Data {
-    welcome_channel: Mutex<Option<u64>>,
-    send_welcome_message: Mutex<bool>,
-} // User data, which is stored and accessible in all command invocations
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Context<'a> = poise::Context<'a, Data, Error>;
 pub type ApplicationContext<'a> = poise::ApplicationContext<'a, Data, Error>;
@@ -40,10 +42,14 @@ async fn handle_event(
 ) -> Result<(), Error> {
     match event {
         serenity::FullEvent::GuildMemberAddition { new_member } => {
-            write_welcome(ctx, data, new_member).await?
+            write_welcome(ctx, data, new_member).await?;
+            set_role(ctx, data, new_member).await?;
         }
         serenity::FullEvent::Ready { data_about_bot } => {
             println!("{} is ready!", data_about_bot.user.name);
+        }
+        serenity::FullEvent::Resume { event } => {
+            write_to_conf(ctx, data, event).await?;
         }
         _ => {}
     }
@@ -62,19 +68,23 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
     let bot_state = if let Ok(config) = BotConfig::read(&default_path) {
         println!("{:?}", config);
         Data {
-            welcome_channel: Mutex::new(Some(config.welcome.channel)),
-            send_welcome_message: Mutex::new(config.welcome.enabled),
+            welcome: Mutex::new(Welcome {
+                enabled: config.welcome.enabled,
+                channel: Some(config.welcome.channel)
+            }),
+            autorole: Mutex::new(AutoRole {
+                enabled: config.autorole.enabled,
+                role: Some(config.autorole.role)
+            }),
+            ..Default::default()
         }
     } else {
-        Data {
-            welcome_channel: Mutex::new(None),
-            send_welcome_message: Mutex::new(false),
-        }
+        Data::default()
     };
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![hello(), mkembed(), enable_welcome(), purge(), create_role_menu()],
+            commands: vec![hello(), mkembed(), set_welcome(), toggle_welcome(), purge(), set_autorole(), toggle_autorole()],
             event_handler: |ctx, event, framework, data| {
                 Box::pin(handle_event(ctx, event, framework, data))
             },

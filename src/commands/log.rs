@@ -1,43 +1,41 @@
-use std::path::Path;
-
-use crate::{ApplicationContext, Data, Error, BotConfig};
+use crate::{ApplicationContext, Data, Error};
 use poise::{
     serenity_prelude::{self as serenity, Channel, ChannelId, CreateMessage, Member, Mentionable},
     CreateReply,
 };
 
 #[poise::command(slash_command, required_permissions = "ADMINISTRATOR")]
-pub async fn enable_welcome(
+pub async fn toggle_welcome(
+    ctx: ApplicationContext<'_>, 
+) -> Result<(), Error> {
+    let enabled = {
+        let mut welcome = ctx.data().welcome.try_lock().expect("Poisoned lock.");
+        welcome.enabled = !welcome.enabled;
+        welcome.enabled
+    };
+
+    let reply = CreateReply::default()
+        .content(format!("Welcome has been set to {enabled}"))
+        .ephemeral(true);
+
+    ctx.send(reply).await?;
+    Ok(())
+}
+
+#[poise::command(slash_command, required_permissions = "ADMINISTRATOR")]
+pub async fn set_welcome(
     ctx: ApplicationContext<'_>,
     #[description = "Channel which welcome messages will be sent."] channel: Channel,
 ) -> Result<(), Error> {
-    let welcome_channel = {
-        let mut welcome_channel = ctx.data().welcome_channel.lock().expect("poisoned lock");
-        *welcome_channel = Some(channel.id().into());
-        *welcome_channel
+    let channel = {
+        let mut welcome = ctx.data().welcome.try_lock().expect("Poisoned lock.");
+        welcome.channel = Some(channel.id().get());
+        welcome.channel
     };
-
-    let send_welcome_message = {
-        let mut send_welcome_message = ctx
-            .data()
-            .send_welcome_message
-            .lock()
-            .expect("poisoned lock");
-        *send_welcome_message = true;
-        *send_welcome_message
-    };
-
-    let default_path = Path::new("config.toml");
-
-    let mut new_config = BotConfig::default();
-    new_config.welcome.channel = welcome_channel.unwrap();
-    new_config.welcome.enabled = send_welcome_message;
-    new_config.write(&default_path).expect("Can't write to file.");
-
-    let channel_mention = ChannelId::new(welcome_channel.unwrap()).mention();
-
+    let channel_mention = ChannelId::new(channel.unwrap()).mention();
+    
     let reply = CreateReply::default()
-        .content(format!("Welcome message has been set to {send_welcome_message} and the welcome channel has been set to {channel_mention}!"))
+        .content(format!("Welcome channel has ben set to {channel_mention}"))
         .ephemeral(true);
 
     ctx.send(reply).await?;
@@ -49,15 +47,16 @@ pub async fn write_welcome(
     data: &Data,
     new_member: &Member,
 ) -> Result<(), Error> {
-    if *data
-        .send_welcome_message
+    if data
+        .welcome
         .try_lock()
-        .expect("poisoned lock.")
+        .expect("poisoned lock.").enabled
     {
         let welcome_channel = data
-            .welcome_channel
+            .welcome
             .try_lock()
             .expect("poisoned lock.")
+            .channel
             .expect("Welcome channel not set.");
         let welcome_channel = serenity::ChannelId::new(welcome_channel);
         let member_mention = new_member.mention();

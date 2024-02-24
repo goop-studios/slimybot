@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use crate::{Context, Error};
 use poise::{
     serenity_prelude::{self as serenity, GetMessages},

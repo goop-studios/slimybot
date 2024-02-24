@@ -1,3 +1,7 @@
 [welcome]
 enabled = true
 channel = 1209093931527311401
+
+[autorole]
+enabled = true
+role = 1210305756742553620
