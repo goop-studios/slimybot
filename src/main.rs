@@ -30,6 +30,7 @@ pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Context<'a> = poise::Context<'a, Data, Error>;
 pub type ApplicationContext<'a> = poise::ApplicationContext<'a, Data, Error>;
 
+/// Show help for a single command or all commands.
 #[poise::command(slash_command, track_edits, category = "Utility")]
 async fn help(
     ctx: Context<'_>,
