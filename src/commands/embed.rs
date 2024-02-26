@@ -68,7 +68,7 @@ struct CombinedEmbed {
     fields: Option<Vec<EmbedModal3>>,
 }
 
-/// Creates a modal for making embeds in picked channel. WIP
+/// Creates a modal for making embeds in picked channel.
 #[poise::command(
     slash_command,
     required_permissions = "ADMINISTRATOR",
