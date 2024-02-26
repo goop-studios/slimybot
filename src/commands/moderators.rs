@@ -33,7 +33,7 @@ pub async fn purge(
     ctx.send(reply).await?;
     Ok(())
 }
-
+/// Kick a user from the server.
 #[poise::command(
     slash_command,
     required_permissions = "ADMINISTRATOR",
@@ -58,6 +58,7 @@ pub async fn kick(
     Ok(())
 }
 
+/// Ban a user from the server.
 #[poise::command(
     slash_command,
     required_permissions = "ADMINISTRATOR",
@@ -81,7 +82,7 @@ pub async fn ban(
     ctx.send(reply).await?;
     Ok(())
 }
-
+/// Unban a user from the server.
 #[poise::command(
     slash_command,
     required_permissions = "ADMINISTRATOR",
@@ -104,6 +105,7 @@ pub async fn unban(
     Ok(())
 }
 
+/// Mute a user in the server.
 #[poise::command(
     slash_command,
     required_permissions = "ADMINISTRATOR",
