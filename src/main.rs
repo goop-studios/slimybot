@@ -11,7 +11,7 @@ use std::sync::Mutex;
 use commands::{
     embed::mkembed,
     log::{set_welcome, toggle_welcome},
-    moderators::purge,
+    moderators::{ban, kick, mute, purge, unban},
     roles::{set_autorole, toggle_autorole},
 };
 
@@ -114,6 +114,10 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
                 toggle_welcome(),
                 // Moderation
                 purge(),
+                kick(),
+                ban(),
+                unban(),
+                mute(),
                 // Roles
                 set_autorole(),
                 toggle_autorole(),
