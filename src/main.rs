@@ -1,42 +1,47 @@
 use anyhow::Context as _;
-use poise::{samples::HelpConfiguration, serenity_prelude::{self as serenity, ClientBuilder, GatewayIntents}};
+use poise::{
+    samples::HelpConfiguration,
+    serenity_prelude::{self as serenity, ClientBuilder, GatewayIntents},
+};
 use shuttle_secrets::SecretStore;
 use shuttle_serenity::ShuttleSerenity;
-use std::sync::Mutex;
 use std::path::Path;
+use std::sync::Mutex;
 
 use commands::{
-    moderators::purge,
     embed::mkembed,
-    roles::{set_autorole, toggle_autorole, set_role},
-    log::{toggle_welcome, set_welcome, write_welcome},
+    log::{set_welcome, toggle_welcome},
+    moderators::purge,
+    roles::{set_autorole, toggle_autorole},
 };
 
-use state::{Data, Welcome, AutoRole};
+use eventhandler::{set_role, write_to_conf, write_welcome};
 
-use config::{
-    autowrite::write_to_conf,
-    parse::BotConfig
-};
+use state::{AutoRole, Data, Welcome};
 
-mod state;
+use config::parse::BotConfig;
+
 mod commands;
 mod config;
+mod eventhandler;
+mod state;
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Context<'a> = poise::Context<'a, Data, Error>;
 pub type ApplicationContext<'a> = poise::ApplicationContext<'a, Data, Error>;
 
-
 #[poise::command(slash_command, track_edits, category = "Utility")]
-async fn help(ctx: Context<'_>, #[description = "Command to get help for."] mut command: Option<String>) -> Result<(), Error> {
+async fn help(
+    ctx: Context<'_>,
+    #[description = "Command to get help for."] mut command: Option<String>,
+) -> Result<(), Error> {
     if ctx.invoked_command_name() != "help" {
         command = match command {
             Some(c) => Some(format!("{} {}", ctx.invoked_command_name(), c)),
-            None => Some(ctx.invoked_command_name().to_string())
+            None => Some(ctx.invoked_command_name().to_string()),
         };
     }
-    
+
     let config = HelpConfiguration {
         show_subcommands: true,
         show_context_menu_commands: true,
@@ -47,7 +52,6 @@ async fn help(ctx: Context<'_>, #[description = "Command to get help for."] mut 
     poise::builtins::help(ctx, command.as_deref(), config).await?;
     Ok(())
 }
-
 
 async fn handle_event(
     ctx: &serenity::Context,
@@ -85,11 +89,11 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
         Data {
             welcome: Mutex::new(Welcome {
                 enabled: config.welcome.enabled,
-                channel: Some(config.welcome.channel)
+                channel: Some(config.welcome.channel),
             }),
             autorole: Mutex::new(AutoRole {
                 enabled: config.autorole.enabled,
-                role: Some(config.autorole.role)
+                role: Some(config.autorole.role),
             }),
             ..Default::default()
         }
@@ -99,7 +103,20 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![help(), mkembed(), set_welcome(), toggle_welcome(), purge(), set_autorole(), toggle_autorole()],
+            commands: vec![
+                // Utility
+                help(),
+                // Embed
+                mkembed(),
+                // Logs
+                set_welcome(),
+                toggle_welcome(),
+                // Moderation
+                purge(),
+                // Roles
+                set_autorole(),
+                toggle_autorole(),
+            ],
             event_handler: |ctx, event, framework, data| {
                 Box::pin(handle_event(ctx, event, framework, data))
             },
