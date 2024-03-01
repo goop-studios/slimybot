@@ -6,8 +6,9 @@ use poise::serenity_prelude::{
     self as serenity, CacheHttp, CreateMessage, Member, Mentionable, ResumedEvent,
 };
 use std::path::Path;
+use tracing::info;
 
-pub async fn write_welcome(
+async fn write_welcome(
     ctx: &serenity::Context,
     data: &Data,
     new_member: &Member,
@@ -36,7 +37,7 @@ pub async fn write_welcome(
     Ok(())
 }
 
-pub async fn write_to_conf(
+async fn write_to_conf(
     _ctx: &serenity::Context,
     data: &Data,
     event: &ResumedEvent,
@@ -72,11 +73,7 @@ pub async fn write_to_conf(
     Ok(())
 }
 
-pub async fn set_role(
-    ctx: &serenity::Context,
-    data: &Data,
-    new_member: &Member,
-) -> Result<(), Error> {
+async fn set_role(ctx: &serenity::Context, data: &Data, new_member: &Member) -> Result<(), Error> {
     if data.autorole.try_lock().expect("poisoned lock.").enabled {
         let role = data
             .autorole
@@ -86,6 +83,82 @@ pub async fn set_role(
             .expect("Welcome channel not set.");
         let role_id = serenity::RoleId::new(role);
         new_member.add_role(&ctx.http(), role_id).await?;
+    }
+    Ok(())
+}
+
+pub async fn handle_event(
+    ctx: &serenity::Context,
+    event: &serenity::FullEvent,
+    _framework: poise::FrameworkContext<'_, Data, Error>,
+    data: &Data,
+) -> Result<(), Error> {
+    match event {
+        serenity::FullEvent::GuildMemberAddition { new_member } => {
+            write_welcome(ctx, data, new_member).await?;
+            set_role(ctx, data, new_member).await?;
+        }
+        serenity::FullEvent::Ready { data_about_bot } => {
+            println!("{} is ready!", data_about_bot.user.name);
+        }
+        serenity::FullEvent::Resume { event } => {
+            write_to_conf(ctx, data, event).await?;
+        }
+        serenity::FullEvent::ReactionAdd { add_reaction } => {
+            let data = data.reaction_roles.try_lock().expect("Poisoned lock.");
+
+            info!("Reaction added: {:?}", add_reaction);
+
+            let add_reaction_clone = add_reaction.clone();
+            if add_reaction_clone.member.unwrap().user.id != ctx.cache().unwrap().current_user().id
+            {
+                for reaction in &data.reactions {
+                    if reaction.message.id == add_reaction.message_id {
+                        let role_id = serenity::RoleId::new(reaction.role);
+                        info!("Adding role {:?}", role_id.to_role_cached(&ctx.cache));
+                        add_reaction
+                            .member
+                            .as_ref()
+                            .expect("Member not found.")
+                            .add_role(&ctx.http(), role_id)
+                            .await?;
+
+                        info!(
+                            "add_reaction member: {:?}",
+                            add_reaction.member.as_ref().unwrap().user.id
+                        );
+                    }
+                }
+            }
+        }
+        serenity::FullEvent::ReactionRemove { removed_reaction } => {
+            let data = data.reaction_roles.try_lock().expect("Poisoned lock.");
+
+            info!("Reaction removed: {:?}", removed_reaction);
+
+            for reaction in &data.reactions {
+                if reaction.message.id == removed_reaction.message_id {
+                    let role_id = serenity::RoleId::new(reaction.role);
+                    info!("Removing role {:?}", role_id.to_role_cached(&ctx.cache));
+                    removed_reaction
+                        .member
+                        .as_ref()
+                        .expect("Member not found.")
+                        .remove_role(&ctx.http(), role_id)
+                        .await?;
+                    info!(
+                        "removed_reaction member: {:?}",
+                        removed_reaction.member.as_ref().unwrap().user.id
+                    );
+                } else {
+                    info!(
+                        "Reaction not found.. {} != {}",
+                        reaction.message.id, removed_reaction.message_id
+                    );
+                }
+            }
+        }
+        _ => {}
     }
     Ok(())
 }

@@ -1,21 +1,22 @@
 use anyhow::Context as _;
 use poise::{
     samples::HelpConfiguration,
-    serenity_prelude::{self as serenity, ClientBuilder, GatewayIntents},
+    serenity_prelude::{ClientBuilder, GatewayIntents},
 };
 use shuttle_secrets::SecretStore;
 use shuttle_serenity::ShuttleSerenity;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use commands::{
     embed::mkembed,
     log::{set_welcome, toggle_welcome},
     moderators::{ban, kick, mute, purge, unban},
-    roles::{set_autorole, toggle_autorole},
+    roles::{set_autorole, set_reaction_role, toggle_autorole},
 };
 
-use eventhandler::{set_role, write_to_conf, write_welcome};
+use eventhandler::handle_event;
 
 use state::{AutoRole, Data, Welcome};
 
@@ -24,7 +25,7 @@ use config::parse::BotConfig;
 mod commands;
 mod config;
 mod eventhandler;
-mod state;
+pub(crate) mod state;
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Context<'a> = poise::Context<'a, Data, Error>;
@@ -54,28 +55,6 @@ async fn help(
     Ok(())
 }
 
-async fn handle_event(
-    ctx: &serenity::Context,
-    event: &serenity::FullEvent,
-    _framework: poise::FrameworkContext<'_, Data, Error>,
-    data: &Data,
-) -> Result<(), Error> {
-    match event {
-        serenity::FullEvent::GuildMemberAddition { new_member } => {
-            write_welcome(ctx, data, new_member).await?;
-            set_role(ctx, data, new_member).await?;
-        }
-        serenity::FullEvent::Ready { data_about_bot } => {
-            println!("{} is ready!", data_about_bot.user.name);
-        }
-        serenity::FullEvent::Resume { event } => {
-            write_to_conf(ctx, data, event).await?;
-        }
-        _ => {}
-    }
-    Ok(())
-}
-
 #[shuttle_runtime::main]
 async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleSerenity {
     // Get the discord token set in `Secrets.toml`
@@ -88,14 +67,15 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
     let bot_state = if let Ok(config) = BotConfig::read(&default_path) {
         println!("{:?}", config);
         Data {
-            welcome: Mutex::new(Welcome {
+            welcome: Arc::new(Mutex::new(Welcome {
                 enabled: config.welcome.enabled,
                 channel: Some(config.welcome.channel),
-            }),
-            autorole: Mutex::new(AutoRole {
+            })),
+            autorole: Arc::new(Mutex::new(AutoRole {
                 enabled: config.autorole.enabled,
                 role: Some(config.autorole.role),
-            }),
+            })),
+            reaction_roles: Arc::new(Mutex::new(Default::default())),
             ..Default::default()
         }
     } else {
@@ -121,6 +101,7 @@ async fn main(#[shuttle_secrets::Secrets] secret_store: SecretStore) -> ShuttleS
                 // Roles
                 set_autorole(),
                 toggle_autorole(),
+                set_reaction_role(),
             ],
             event_handler: |ctx, event, framework, data| {
                 Box::pin(handle_event(ctx, event, framework, data))
