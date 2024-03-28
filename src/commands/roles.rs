@@ -88,8 +88,8 @@ pub async fn set_reaction_role(
     {
         data.reactions[index] = ReactionParams {
             role: role.id.get(),
-            emoji: emoji,
-            message: message,
+            emoji,
+            message,
         };
     } else {
         data.add_reaction(role.id.get(), emoji, message);
